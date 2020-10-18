@@ -1,6 +1,6 @@
 # IpToHostname
 
-elimizde ip adreslerinden oluşan bir liste olduğu varsayıyoruz. Bu ip adreslerinin hangisi paypal.com'a ait subdomaine ait olup olmadığını bulmak için bu programı kullanabilirsiniz.
+Elimizdeki ip listesinden subdomain adreslerini bulmak için yapılmış basit bir programdır.
 
 # Install
 
