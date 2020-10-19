@@ -7,39 +7,72 @@ import threading
 from colorama import *
 from concurrent.futures import ThreadPoolExecutor
 
-
-init(autoreset=True)
 requests.packages.urllib3.disable_warnings()
 
+class HostFind():
+    
+    def __init__(self):
+        
+        init(autoreset=True)
+        self.ip_list = []
+        self.print_lock = threading.Lock()
+    
+        if args.list:
+    
+            if not os.path.exists(args.list):
+                print(Fore.MAGENTA + "Ip List Not Found In This Path: {}".format(args.list))
+                sys.exit()
 
-def start(ip):
+            x = open(args.list, "r").read().split("\n")
+            self.ip_list.extend(list(set(filter(None, x))))
 
-    try:
+            if not len(self.ip_list) > 0:
+                print(Fore.MAGENTA + "Ip List Is Empty: {}".format(args.list))
+                sys.exit()
 
-        response = requests.get("https://www.ip-tracker.org/locator/ip-lookup.php?ip="+str(ip), verify=False, timeout=args.timeout, allow_redirects=False,headers={"User-Agent": "Mozilla Firefox 66.00"})
+            del x
 
-        if args.target in response.text:
+        else:
+            print(Fore.MAGENTA + "You Need To Use --list Param")
+            sys.exit()
 
-            global reg_target
+        if args.target:
 
-            regex = re.findall(reg_target,response.text)
+            self.reg_target = args.target.replace(".", "\.").replace("-", "\-").replace("_", "\_")
+            self.reg_target = "[a-zA-Z0-9._-]+" + self.reg_target + "|" + self.reg_target
 
-            with print_lock:
+        else:
+            print(Fore.MAGENTA + "You Need To Use --target Param")
+            sys.exit()
 
-                print(Fore.GREEN + "[" + Fore.MAGENTA + "FOUND" + Fore.GREEN + "]", Fore.YELLOW + str(ip), Fore.MAGENTA + ">>>", Fore.CYAN + str(regex[0]))
+        with ThreadPoolExecutor(max_workers=args.thread) as executor:
+            executor.map(self.start, self.ip_list)
 
-            if args.output:
-                print_output(ip,regex[0])
+    def start(self,ip):
 
-    except:
-        pass
+        try:
 
+            response = requests.get("https://www.ip-tracker.org/locator/ip-lookup.php?ip="+str(ip), verify=False, timeout=args.timeout, allow_redirects=False,headers={"User-Agent": "Mozilla Firefox 66.00"})
 
-def print_output(ip,sub):
+            if args.target in response.text:
 
-    with open(args.output, "a+") as file:
+                regex = re.findall(self.reg_target,response.text)
 
-        file.write(str(ip) + "," + str(sub) + "\n")
+                with self.print_lock:
+
+                    print(Fore.GREEN + "[" + Fore.MAGENTA + "FOUND" + Fore.GREEN + "]", Fore.YELLOW + str(ip), Fore.MAGENTA + ">>>", Fore.CYAN + str(regex[0]))
+
+                if args.output:
+                    self.print_output(ip,regex[0])
+
+        except:
+            pass
+
+    def print_output(self,ip,sub):
+
+        with open(args.output, "a+") as file:
+
+            file.write(str(ip) + "," + str(sub) + "\n")
 
 
 if __name__ == "__main__":
@@ -52,37 +85,4 @@ if __name__ == "__main__":
     ap.add_argument("--timeout", metavar="", required=False, default=8, type=int, help="Requests Timeout(Default-8)")
     args= ap.parse_args()
 
-
-    ip_list = []
-    print_lock = threading.Lock()
-
-    if args.list:
-
-        if not os.path.exists(args.list):
-            print(Fore.MAGENTA + "Ip List Not Found In This Path: {}".format(args.list))
-            sys.exit()
-
-        x = open(args.list, "r").read().split("\n")
-        ip_list.extend(list(set(filter(None, x))))
-
-        if not len(ip_list) > 0:
-            print(Fore.MAGENTA + "Ip List Is Empty: {}".format(args.list))
-            sys.exit()
-
-        del x
-
-    else:
-        print(Fore.MAGENTA + "You Need To Use --list Param")
-        sys.exit()
-
-    if args.target:
-
-        reg_target = args.target.replace(".", "\.").replace("-", "\-").replace("_", "\_")
-        reg_target = "[a-zA-Z0-9._-]+" + reg_target + "|" + reg_target
-
-    else:
-        print(Fore.MAGENTA + "You Need To Use --target Param")
-        sys.exit()
-
-    with ThreadPoolExecutor(max_workers=args.thread) as executor:
-        executor.map(start, ip_list)
+    run = HostFind()
